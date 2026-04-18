@@ -1,0 +1,41 @@
+{
+  "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
+  "name": "historyfinders",
+  "server": {
+    "dir": "dist/server",
+    "entry": "index.js"
+  },
+  "scripts": {
+    "dev": "node --experimental-strip-types ./tools/build.ts --watch",
+    "build": "node --experimental-strip-types ./tools/build.ts --minify"
+  },
+  "dev": {
+    "subreddit": "historyhiders_dev3"
+  },
+  "permissions": {
+    "redis": true,
+    "reddit": {
+      "enable": true
+    }
+  },
+  "scheduler": {
+    "tasks": {
+      "publish-push": {
+        "endpoint": "/internal/cron/hourly-check",
+        "cron": "15 * * * *"
+      },
+      "manualverification": "/internal/scheduler/manualverification"
+    }
+  },
+  "menu": {
+    "items": [
+      {
+        "label": "Now Update",
+        "description": "History Finders",
+        "forUserType": "moderator",
+        "location": "subreddit",
+        "endpoint": "/internal/menu/activate-now"
+      }
+    ]
+  }
+}
