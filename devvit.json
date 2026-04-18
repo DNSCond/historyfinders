@@ -5,10 +5,6 @@
     "dir": "dist/server",
     "entry": "index.js"
   },
-  "scripts": {
-    "dev": "node --experimental-strip-types ./tools/build.ts --watch",
-    "build": "node --experimental-strip-types ./tools/build.ts --minify"
-  },
   "dev": {
     "subreddit": "historyhiders_dev3"
   },

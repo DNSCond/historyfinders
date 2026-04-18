@@ -25,18 +25,20 @@ async function hourlyCheck(rejectAnyRevisionsBefore: number) {
         wikipages = await reddit.getWikiPages(subredditName), now = Date.now();
     // const modlog = reddit.getModerationLog({subredditName, type: 'wikirevise'});
     // for await (const modlogEntry of modlog) {console.log(modlogEntry);}
-    await Promise.allSettled(wikipages.map(async wikipageName => {
-        const promiseList: PromiseLike<unknown>[] = [];
-        let index = 0;
+    const promiseList: PromiseLike<unknown>[] = [];
+    let index = 0;
+    for (const wikipageName of wikipages) {
+        if (!wikipageName.startsWith('incomming/')) continue;
         for await (const wikipageRevision of reddit.getWikiPageRevisions({
             subredditName, page: wikipageName, limit: 500,
         })) {
-            console.log(`${wikipageRevision.date}\n${new Date(rejectAnyRevisionsBefore)}\n---\n`);
-            if (wikipageRevision.date.getTime() < rejectAnyRevisionsBefore) continue;
-            const unit = ++index,
-                result = /^r\/(t5_[a-z0-9]+)\/(?:(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?)?\//.exec(wikipageRevision.reason);
+            if (DevvitDateBufFix(wikipageRevision.date).getTime() < rejectAnyRevisionsBefore) {
+                continue;
+            }
+            const unit = ++index;
+            const result = /^r\/(t5_[a-z0-9]+)\/(?:(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?)?\//.exec(wikipageRevision.reason);
             if (result) {
-                const wikipageRevisionId = wikipageRevision.id//[, subredditId, _major, _minor, _patch, _pre] = result;
+                const wikipageRevisionId = wikipageRevision.id;//[, subredditId, _major, _minor, _patch, _pre] = result;
                 console.log('manualverification', {wikipageName, wikipageRevisionId})
                 promiseList.push(scheduler.runJob({
                     name: 'manualverification', data: {wikipageName, wikipageRevisionId},
@@ -44,8 +46,8 @@ async function hourlyCheck(rejectAnyRevisionsBefore: number) {
                 }));
             }
         }
-        return Promise.allSettled(promiseList);
-    }));
+    }
+    await Promise.allSettled(promiseList);
 }
 
 router.post<string, never, TaskResponse, TaskRequest<{
@@ -55,8 +57,14 @@ router.post<string, never, TaskResponse, TaskRequest<{
     req, res) => {
     const {data} = req.body, {wikipageName, wikipageRevisionId} = data, {subredditName} = context;
     // @ts-expect-error
-    reddit.getWikiPage(subredditName, wikipageName, wikipageRevisionId).then(wikipage => {
+    await reddit.getWikiPage(subredditName, wikipageName, wikipageRevisionId).then(wikipage => {
         console.log(wikipage.content)
     });
     res.status(200).json({});
 });
+
+function DevvitDateBufFix(bugged_date: Date | string | number) {
+    const date = new Date(bugged_date);
+    date.setTime(date.getTime() * 1000);
+    return date;
+}
